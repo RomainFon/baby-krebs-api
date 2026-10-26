@@ -54,6 +54,9 @@ return [
 
     'url' => env('APP_URL', 'http://localhost'),
 
+    // URL du SPA : cible des redirections après la connexion SSO Microsoft.
+    'frontend_url' => env('FRONTEND_URL', 'http://localhost:5196'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone

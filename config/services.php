@@ -35,4 +35,14 @@ return [
         ],
     ],
 
+    // Connexion SSO Microsoft (socialiteproviders/microsoft). `tenant` :
+    // "common" accepte comptes pro/école et personnels ; mettre l'ID du
+    // tenant Entra ID pour n'accepter que les comptes de l'organisation.
+    'microsoft' => [
+        'client_id' => env('MICROSOFT_CLIENT_ID'),
+        'client_secret' => env('MICROSOFT_CLIENT_SECRET'),
+        'redirect' => env('MICROSOFT_REDIRECT_URI'),
+        'tenant' => env('MICROSOFT_TENANT_ID', 'common'),
+    ],
+
 ];
