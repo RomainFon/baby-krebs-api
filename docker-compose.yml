@@ -1,0 +1,32 @@
+services:
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - storage:/var/www/html/storage
+      - public:/var/www/html/public
+    networks:
+      - api
+
+  nginx:
+    build:
+      context: .
+      dockerfile: docker/nginx/Dockerfile
+    restart: unless-stopped
+    volumes:
+      - public:/var/www/html/public:ro
+    networks:
+      - api
+    depends_on:
+      - api
+
+volumes:
+  storage:
+  public:
+
+networks:
+  api:

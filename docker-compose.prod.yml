@@ -1,0 +1,88 @@
+# =============================================================================
+# docker-compose.prod.yml
+# Usage : docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+#
+# Autonome (le `-f` explicite écarte docker-compose.yml/override.yml de dev).
+# Rejoint le Traefik du projet `infra` (réseau externe "traefik_network").
+# Un seul domaine partagé avec baby-krebs-client : /api et /sanctum sont
+# routés ici, tout le reste vers le client (règle catch-all) -- même principe
+# que le proxy Vite en dev, aucun cookie cross-domaine.
+#
+# Base de données : Postgres partagé du projet `infra` (conteneur
+# `infra-postgres`, réseau externe `db_network`), base créée avec
+# `infra/scripts/create-database.sh babykrebs`.
+# =============================================================================
+
+services:
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    restart: unless-stopped
+    env_file: .env.prod
+    environment:
+      DB_HOST: ${DB_HOST:-infra-postgres}
+    volumes:
+      - storage:/var/www/html/storage
+      - public:/var/www/html/public
+    networks:
+      - internal
+      - db
+    # php-fpm n'ouvre le port 9000 qu'après l'entrypoint (migrations
+    # comprises) : "healthy" = base migrée. Si Postgres n'est pas prêt, la
+    # migration échoue et `restart: unless-stopped` relance le conteneur.
+    healthcheck:
+      test: ["CMD-SHELL", "php -r 'exit(@fsockopen(\"127.0.0.1\", 9000) ? 0 : 1);'"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+
+  nginx:
+    build:
+      context: .
+      dockerfile: docker/nginx/Dockerfile
+    restart: unless-stopped
+    volumes:
+      - public:/var/www/html/public:ro
+    networks:
+      - internal
+      - traefik_network
+    depends_on:
+      api:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      # nginx est sur deux réseaux : sans ce label, Traefik peut choisir le
+      # mauvais et chaque requête finit en 504.
+      - "traefik.docker.network=traefik_network"
+      - "traefik.http.services.baby-krebs-api.loadbalancer.server.port=80"
+      - "traefik.http.routers.baby-krebs-api.rule=Host(`${BABY_KREBS_DOMAIN}`) && (PathPrefix(`/api`) || PathPrefix(`/sanctum`))"
+      - "traefik.http.routers.baby-krebs-api.entrypoints=websecure"
+      - "traefik.http.routers.baby-krebs-api.tls=true"
+      - "traefik.http.routers.baby-krebs-api.tls.certresolver=letsencrypt"
+      # Priorité haute : doit primer sur la règle catch-all du client.
+      - "traefik.http.routers.baby-krebs-api.priority=100"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.3"
+          memory: 128M
+
+volumes:
+  storage:
+  public:
+
+networks:
+  internal:
+  traefik_network:
+    external: true
+  db:
+    name: db_network
+    external: true

@@ -1,0 +1,51 @@
+services:
+
+  api:
+    environment:
+      # .env est orienté "dev host" (127.0.0.1:5436) pour pouvoir lancer
+      # artisan/tinker sans conteneur. Le conteneur, lui, résout Postgres par
+      # son nom Docker et son port interne : ces variables ont priorité.
+      DB_HOST: postgres
+      DB_PORT: 5432
+    volumes:
+      # Bind mount du code en dev : pas de rebuild à chaque changement PHP.
+      # opcache-dev.ini relit les fichiers modifiés : pas de redémarrage
+      # nécessaire après un changement de code.
+      - .:/var/www/html:delegated
+      - ./docker/php/opcache-dev.ini:/usr/local/etc/php/conf.d/zz-opcache-dev.ini:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - api
+      - db
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_DATABASE}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5436:5432"
+    networks:
+      - db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_DATABASE}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  nginx:
+    ports:
+      - "8096:80"
+
+networks:
+  db:
+
+volumes:
+  postgres_data:

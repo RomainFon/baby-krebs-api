@@ -1,0 +1,26 @@
+.git
+.github
+.idea
+.vscode
+node_modules
+vendor
+tests
+database/database.sqlite
+
+# Jamais d'environnement dans l'image : le conteneur reçoit sa config par
+# `env_file` / variables (cf. docker-compose.prod.yml). Sans ça, le .env de
+# dev (APP_KEY, mots de passe...) serait embarqué dans l'image.
+.env
+.env.*
+!.env.example
+
+bootstrap/cache/*.php
+storage/logs/*
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+
+# Fichiers de déploiement : inutiles dans l'image.
+docker-compose*.yml
+deploy.sh
+*.md
