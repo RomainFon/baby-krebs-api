@@ -23,7 +23,7 @@ class TournamentDraw
     public static function formatError(int $teamCount, int $groupCount, int $wbPerGroup, int $lbPerGroup): ?string
     {
         if ($groupCount * $wbPerGroup < 2) {
-            return 'Il faut au moins 2 équipes qualifiées en winner bracket.';
+            return 'Il faut au moins 2 équipes qualifiées en Ligue des champions.';
         }
         if ($teamCount < $groupCount * 2) {
             return "Il faut au moins 2 équipes par poule ({$groupCount} poules → ".($groupCount * 2).' équipes minimum).';

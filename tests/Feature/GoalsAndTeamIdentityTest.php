@@ -115,6 +115,24 @@ class GoalsAndTeamIdentityTest extends TestCase
         $this->assertEmpty(array_diff($assigned->all(), Team::COLORS));
     }
 
+    public function test_team_color_can_be_picked(): void
+    {
+        $game = $this->game();
+        $team = Team::find($game->team_a_id);
+        $payload = ['name' => $team->name, 'players' => $team->playerIds()];
+
+        $this->actingAs($this->admin)->patchJson("/api/teams/{$team->id}", [...$payload, 'color' => '#12AB9F'])
+            ->assertOk();
+        $this->assertSame('#12ab9f', $team->fresh()->color);
+
+        // Sans couleur envoyée, celle en place est conservée.
+        $this->actingAs($this->admin)->patchJson("/api/teams/{$team->id}", $payload)->assertOk();
+        $this->assertSame('#12ab9f', $team->fresh()->color);
+
+        $this->actingAs($this->admin)->patchJson("/api/teams/{$team->id}", [...$payload, 'color' => 'red'])
+            ->assertJsonValidationErrors('color');
+    }
+
     public function test_logo_upload_and_serving(): void
     {
         Storage::fake('local');

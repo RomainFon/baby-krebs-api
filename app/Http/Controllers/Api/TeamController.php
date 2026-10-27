@@ -25,15 +25,15 @@ class TeamController extends Controller
         }
 
         $tournament->teams()->create([
-            ...$this->attributes($request),
             'color' => Team::randomColor($tournament),
+            ...$this->attributes($request),
         ]);
 
         return $this->detail($tournament);
     }
 
-    // Renommer une équipe ou corriger un nom de joueur reste possible à tout
-    // moment (aucun impact sur l'arbre).
+    // Renommer une équipe, corriger un joueur ou changer sa couleur reste
+    // possible à tout moment (aucun impact sur l'arbre).
     public function update(TeamRequest $request, Team $team): TournamentDetailResource
     {
         $team->update($this->attributes($request));
@@ -96,6 +96,7 @@ class TeamController extends Controller
             'name' => trim($request->validated('name')),
             'player_one_id' => $one,
             'player_two_id' => $two,
+            ...($request->has('color') ? ['color' => strtolower($request->validated('color'))] : []),
         ];
     }
 

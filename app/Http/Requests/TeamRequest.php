@@ -24,6 +24,8 @@ class TeamRequest extends FormRequest
             // Uniquement des joueurs existants (créés au préalable par l'admin).
             'players' => ['required', 'array', 'size:2'],
             'players.*' => ['required', 'integer', 'distinct', Rule::exists('players', 'id')],
+            // Couleur choisie à la roue chromatique (sinon tirée au hasard à la création).
+            'color' => ['sometimes', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
         ];
     }
 
@@ -53,7 +55,7 @@ class TeamRequest extends FormRequest
 
     public function attributes(): array
     {
-        return ['players.*' => 'joueur'];
+        return ['players.*' => 'joueur', 'color' => 'couleur'];
     }
 
     public function messages(): array
