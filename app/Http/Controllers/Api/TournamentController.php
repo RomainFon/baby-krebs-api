@@ -87,6 +87,6 @@ class TournamentController extends Controller
 
     private function loadDetail(Tournament $tournament): Tournament
     {
-        return $tournament->fresh()->load(['teams.playerOne', 'teams.playerTwo', 'pools', 'games']);
+        return $tournament->withDetail();
     }
 }

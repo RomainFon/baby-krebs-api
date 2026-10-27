@@ -31,6 +31,8 @@ class TournamentSummaryResource extends JsonResource
             'champion' => $champion ? [
                 'id' => $champion->id,
                 'name' => $champion->name,
+                'color' => $champion->color,
+                'logo_url' => $champion->logoUrl(),
                 'players' => [$champion->playerOne?->name, $champion->playerTwo?->name],
             ] : null,
             'created_at' => $this->created_at,

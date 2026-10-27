@@ -53,6 +53,12 @@ class Tournament extends Model
         return $this->hasMany(Game::class)->orderBy('number');
     }
 
+    /** Rechargé avec tout ce qu'affiche TournamentDetailResource. */
+    public function withDetail(): self
+    {
+        return $this->fresh()->load(['teams.playerOne', 'teams.playerTwo', 'pools', 'games.goals']);
+    }
+
     public function isDraft(): bool
     {
         return $this->status === self::STATUS_DRAFT;

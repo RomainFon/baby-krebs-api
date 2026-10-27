@@ -17,6 +17,7 @@ Route::get('/tournaments/{tournament}', [TournamentController::class, 'show']);
 Route::get('/players', [PlayerController::class, 'index']);
 Route::get('/players/{player}', [PlayerController::class, 'show']);
 Route::get('/stats', [StatsController::class, 'index']);
+Route::get('/teams/{team}/logo', [TeamController::class, 'showLogo'])->name('teams.logo');
 
 // Écriture : réservée à l'admin (seul compte existant).
 Route::middleware('auth:sanctum')->group(function () {
@@ -32,6 +33,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/tournaments/{tournament}/teams', [TeamController::class, 'store']);
     Route::patch('/teams/{team}', [TeamController::class, 'update']);
     Route::delete('/teams/{team}', [TeamController::class, 'destroy']);
+    Route::post('/teams/{team}/logo', [TeamController::class, 'uploadLogo']);
+    Route::delete('/teams/{team}/logo', [TeamController::class, 'deleteLogo']);
 
     Route::patch('/games/{game}', [GameController::class, 'update']);
 

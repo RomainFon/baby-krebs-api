@@ -33,7 +33,12 @@ class StatsController extends Controller
             'games_played' => $games->count(),
             'best_player' => $player($ranked->sortByDesc($byRate)->first()),
             'worst_player' => $player($ranked->sortBy($byRate)->first()),
-            'top_scorer' => $player($all->where('played', '>', 0)->sortByDesc('goals_for')->first()),
+            // Vrai meilleur buteur dès que des buteurs ont été saisis, sinon le
+            // joueur de l'équipe la plus prolifique.
+            'top_scorer' => $player(
+                $all->where('goals_scored', '>', 0)->sortByDesc('goals_scored')->first()
+                ?? $all->where('played', '>', 0)->sortByDesc('goals_for')->first(),
+            ),
             'leakiest' => $player($all->where('played', '>', 0)->sortByDesc(fn ($r) => $r['goals_against'] / $r['played'])->first()),
             'most_titles' => $player($all->where('titles', '>', 0)->sortByDesc('titles')->first()),
             'fanny_victim' => $player($all->where('fannys_taken', '>', 0)->sortByDesc('fannys_taken')->first()),

@@ -36,6 +36,7 @@ RUN apk add --no-cache \
 
 COPY docker/php/opcache.ini $PHP_INI_DIR/conf.d/opcache.ini
 COPY docker/php/security.ini $PHP_INI_DIR/conf.d/security.ini
+COPY docker/php/uploads.ini $PHP_INI_DIR/conf.d/uploads.ini
 
 WORKDIR /var/www/html
 

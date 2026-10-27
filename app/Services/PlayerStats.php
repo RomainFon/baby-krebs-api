@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Game;
+use App\Models\GameGoal;
 use App\Models\Player;
 use App\Models\Team;
 use Illuminate\Support\Collection;
@@ -37,7 +38,7 @@ class PlayerStats
     }
 
     /**
-     * @return array<int, array{played:int, wins:int, losses:int, goals_for:int, goals_against:int, goal_diff:int, win_rate:float, tournaments:int, titles:int, fannys_given:int, fannys_taken:int}>
+     * @return array<int, array{played:int, wins:int, losses:int, goals_for:int, goals_against:int, goal_diff:int, win_rate:float, tournaments:int, titles:int, fannys_given:int, fannys_taken:int, goals_scored:int, games_with_goals:int}>
      */
     public function all(): array
     {
@@ -45,6 +46,9 @@ class PlayerStats
             'played' => 0, 'wins' => 0, 'losses' => 0, 'goals_for' => 0, 'goals_against' => 0,
             'goal_diff' => 0, 'win_rate' => 0.0, 'tournaments' => 0, 'titles' => 0,
             'fannys_given' => 0, 'fannys_taken' => 0,
+            // Buts marqués par le joueur lui-même (matchs où les buteurs ont
+            // été saisis) ; goals_for reste le total de son équipe.
+            'goals_scored' => 0, 'games_with_goals' => 0,
         ];
 
         $stats = [];
@@ -84,6 +88,12 @@ class PlayerStats
                     unset($s);
                 }
             }
+        }
+
+        foreach (GameGoal::query()->whereIn('game_id', $this->games()->modelKeys())->get() as $goal) {
+            $stats[$goal->player_id] ??= $empty();
+            $stats[$goal->player_id]['goals_scored'] += $goal->goals;
+            $stats[$goal->player_id]['games_with_goals']++;
         }
 
         foreach ($stats as &$s) {

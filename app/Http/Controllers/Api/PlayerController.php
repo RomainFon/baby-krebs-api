@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\PlayerRequest;
 use App\Models\Game;
+use App\Models\GameGoal;
 use App\Models\Player;
 use App\Services\PlayerStats;
 use Illuminate\Http\JsonResponse;
@@ -34,13 +35,15 @@ class PlayerController extends Controller
         $players = Player::query()->pluck('name', 'id');
         $allTeams = $stats->teams();
 
+        $personalGoals = GameGoal::query()->where('player_id', $player->id)->pluck('goals', 'game_id');
+
         $partnerOf = fn ($team) => $team->player_one_id === $player->id ? $team->player_two_id : $team->player_one_id;
 
         $games = $stats->games()
             ->filter(fn (Game $g) => in_array($g->team_a_id, $teamIds, true) || in_array($g->team_b_id, $teamIds, true))
             ->sortByDesc(fn (Game $g) => $g->played_at?->timestamp ?? 0)
             ->values()
-            ->map(function (Game $g) use ($teamIds, $allTeams) {
+            ->map(function (Game $g) use ($teamIds, $allTeams, $personalGoals) {
                 $isA = in_array($g->team_a_id, $teamIds, true);
                 $own = $allTeams->get($isA ? $g->team_a_id : $g->team_b_id);
                 $opponent = $allTeams->get($isA ? $g->team_b_id : $g->team_a_id);
@@ -55,6 +58,8 @@ class PlayerController extends Controller
                     'opponent_name' => $opponent?->name,
                     'score_for' => $isA ? $g->score_a : $g->score_b,
                     'score_against' => $isA ? $g->score_b : $g->score_a,
+                    // Buts du joueur dans ce match, si les buteurs ont été saisis.
+                    'goals_scored' => $personalGoals[$g->id] ?? null,
                     'played_at' => $g->played_at?->toIso8601String(),
                 ];
             });

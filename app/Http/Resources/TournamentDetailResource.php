@@ -26,6 +26,8 @@ class TournamentDetailResource extends JsonResource
             'teams' => $teams->map(fn (Team $team) => [
                 'id' => $team->id,
                 'name' => $team->name,
+                'color' => $team->color,
+                'logo_url' => $team->logoUrl(),
                 'pool_id' => $team->pool_id,
                 'players' => [
                     ['id' => $team->playerOne->id, 'name' => $team->playerOne->name],
@@ -60,6 +62,7 @@ class TournamentDetailResource extends JsonResource
                 'winner_to_slot' => $game->winner_to_slot,
                 'loser_to_game_id' => $game->loser_to_game_id,
                 'loser_to_slot' => $game->loser_to_slot,
+                'goals' => $game->goals->map(fn ($g) => ['player_id' => $g->player_id, 'goals' => $g->goals])->values(),
             ])->values(),
         ];
     }

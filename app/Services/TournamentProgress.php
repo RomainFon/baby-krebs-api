@@ -26,6 +26,10 @@ class TournamentProgress
         $this->ensureEditable($tournament, $game);
 
         DB::transaction(function () use ($game, $tournament, $scoreA, $scoreB, $clearing) {
+            if ($clearing) {
+                $game->goals()->delete();
+            }
+
             $game->update([
                 'score_a' => $scoreA,
                 'score_b' => $scoreB,

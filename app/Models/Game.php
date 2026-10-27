@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
     'tournament_id', 'number', 'stage', 'pool_id', 'round', 'position',
@@ -34,6 +35,11 @@ class Game extends Model
     public function tournament(): BelongsTo
     {
         return $this->belongsTo(Tournament::class);
+    }
+
+    public function goals(): HasMany
+    {
+        return $this->hasMany(GameGoal::class);
     }
 
     public function isPlayed(): bool

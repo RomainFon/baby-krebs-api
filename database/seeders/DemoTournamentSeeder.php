@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Game;
 use App\Models\Player;
+use App\Models\Team;
 use App\Models\Tournament;
 use App\Services\TournamentDraw;
 use App\Services\TournamentProgress;
@@ -51,6 +52,7 @@ class DemoTournamentSeeder extends Seeder
         foreach ($teams as $teamName => [$one, $two]) {
             $tournament->teams()->create([
                 'name' => $teamName,
+                'color' => Team::nextColor($tournament),
                 'player_one_id' => Player::findOrCreateByName($one)->id,
                 'player_two_id' => Player::findOrCreateByName($two)->id,
             ]);
