@@ -61,8 +61,8 @@ Garde-les sous la main pour l'étape suivante.
 ## 3. Cloner et configurer
 
 Les projets vivent dans `/srv/apps`, avec l'utilisateur `ubuntu`. Ne jamais
-utiliser `sudo git` : il écrirait des fichiers en root et casserait
-`deploy.sh`.
+utiliser `sudo git` : il écrirait des fichiers en root et bloquerait les
+mises à jour faites ensuite par RoPloy.
 
 ```bash
 cd /srv/apps
@@ -164,8 +164,8 @@ MICROSOFT_CLIENT_SECRET=<valeur du secret>
 MICROSOFT_TENANT_ID=common   # ou l'ID de l'annuaire si mono-organisation
 ```
 
-Puis `./deploy.sh` : il récupère le code, applique la migration (colonne
-`users.microsoft_id`) et recharge la configuration.
+Puis redéployer (code à jour via RoPloy, puis `./deploy.sh`) : la migration
+(colonne `users.microsoft_id`) est appliquée et la configuration rechargée.
 
 ### 3. Vérifier
 
@@ -182,13 +182,14 @@ l'identifiant Microsoft est mémorisé sur le compte.
 
 ## Mise à jour
 
+La mise à jour du code (git) est faite par **RoPloy**. Une fois le code à
+jour, `deploy.sh` reconstruit les images et redémarre les conteneurs ; les
+migrations tournent au démarrage de `api`. Le script ne fait aucune
+commande git.
+
 ```bash
 cd /srv/apps/baby-krebs-api && ./deploy.sh
 ```
-
-Le script fait un `git pull`, puis rebuild et redémarre les conteneurs. Les
-migrations tournent au démarrage. Il refuse de tourner s'il y a des
-modifications locales non commitées.
 
 ## Sauvegardes
 
