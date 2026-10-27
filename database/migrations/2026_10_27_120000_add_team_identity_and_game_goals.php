@@ -11,7 +11,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('teams', function (Blueprint $table) {
-            // Couleur de l'écusson par défaut (#rrggbb), attribuée à la
+            // Couleur de l'écusson par défaut (#rrggbb), tirée au hasard à la
             // création ; logo optionnel stocké sur le disque local.
             $table->string('color', 7)->nullable()->after('name');
             $table->string('logo_path')->nullable()->after('color');

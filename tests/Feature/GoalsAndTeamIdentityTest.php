@@ -112,7 +112,7 @@ class GoalsAndTeamIdentityTest extends TestCase
         }
         $assigned = $tournament->teams()->pluck('color');
         $this->assertCount(2, $assigned->unique());
-        $this->assertSame(Team::COLORS[0], $assigned->first());
+        $this->assertEmpty(array_diff($assigned->all(), Team::COLORS));
     }
 
     public function test_logo_upload_and_serving(): void

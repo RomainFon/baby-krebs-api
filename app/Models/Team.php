@@ -16,13 +16,16 @@ class Team extends Model
         '#ffd60a', '#4cc9f0', '#f77f00', '#9d4edd', '#2ec4b6', '#ef476f',
     ];
 
-    /** Première couleur de la palette pas encore prise dans le tournoi. */
-    public static function nextColor(Tournament $tournament): string
+    /**
+     * Couleur tirée au hasard parmi celles pas encore prises dans le tournoi
+     * (n'importe laquelle si la palette est épuisée).
+     */
+    public static function randomColor(Tournament $tournament): string
     {
         $used = $tournament->teams()->pluck('color')->all();
+        $free = array_values(array_diff(self::COLORS, $used));
 
-        return collect(self::COLORS)->first(fn ($c) => ! in_array($c, $used, true))
-            ?? self::COLORS[count($used) % count(self::COLORS)];
+        return collect($free ?: self::COLORS)->random();
     }
 
     /** URL relative (même domaine que le SPA), versionnée pour le cache. */

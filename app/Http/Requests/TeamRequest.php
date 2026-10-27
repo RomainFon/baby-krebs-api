@@ -24,8 +24,6 @@ class TeamRequest extends FormRequest
             // Uniquement des joueurs existants (créés au préalable par l'admin).
             'players' => ['required', 'array', 'size:2'],
             'players.*' => ['required', 'integer', 'distinct', Rule::exists('players', 'id')],
-            // Couleur de l'écusson ; attribuée automatiquement si absente.
-            'color' => ['sometimes', 'nullable', 'regex:/^#[0-9a-fA-F]{6}$/'],
         ];
     }
 
@@ -60,9 +58,6 @@ class TeamRequest extends FormRequest
 
     public function messages(): array
     {
-        return [
-            'players.*.distinct' => 'Les deux joueurs doivent être différents.',
-            'color.regex' => 'La couleur doit être au format #rrggbb.',
-        ];
+        return ['players.*.distinct' => 'Les deux joueurs doivent être différents.'];
     }
 }

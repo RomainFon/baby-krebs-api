@@ -52,7 +52,7 @@ class DemoTournamentSeeder extends Seeder
         foreach ($teams as $teamName => [$one, $two]) {
             $tournament->teams()->create([
                 'name' => $teamName,
-                'color' => Team::nextColor($tournament),
+                'color' => Team::randomColor($tournament),
                 'player_one_id' => Player::findOrCreateByName($one)->id,
                 'player_two_id' => Player::findOrCreateByName($two)->id,
             ]);

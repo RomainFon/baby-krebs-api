@@ -26,7 +26,7 @@ class TeamController extends Controller
 
         $tournament->teams()->create([
             ...$this->attributes($request),
-            'color' => $request->validated('color') ?: Team::nextColor($tournament),
+            'color' => Team::randomColor($tournament),
         ]);
 
         return $this->detail($tournament);
@@ -36,10 +36,7 @@ class TeamController extends Controller
     // moment (aucun impact sur l'arbre).
     public function update(TeamRequest $request, Team $team): TournamentDetailResource
     {
-        $team->update([
-            ...$this->attributes($request),
-            ...($request->validated('color') ? ['color' => $request->validated('color')] : []),
-        ]);
+        $team->update($this->attributes($request));
 
         return $this->detail($team->tournament);
     }
