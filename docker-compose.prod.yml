@@ -63,7 +63,7 @@ services:
       # mauvais et chaque requête finit en 504.
       - "traefik.docker.network=traefik_network"
       - "traefik.http.services.baby-krebs-api.loadbalancer.server.port=80"
-      - "traefik.http.routers.baby-krebs-api.rule=Host(`${BABY_KREBS_DOMAIN:-baby-krebs.fontaine-romain.fr}`) && (PathPrefix(`/api`) || PathPrefix(`/sanctum`))"
+      - "traefik.http.routers.baby-krebs-api.rule=Host(`${BABY_KREBS_DOMAIN:-baby-footenor.tenorsolutions.com}`) && (PathPrefix(`/api`) || PathPrefix(`/sanctum`))"
       - "traefik.http.routers.baby-krebs-api.entrypoints=websecure"
       - "traefik.http.routers.baby-krebs-api.tls=true"
       - "traefik.http.routers.baby-krebs-api.tls.certresolver=letsencrypt"

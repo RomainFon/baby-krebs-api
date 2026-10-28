@@ -1,6 +1,6 @@
 # Déploiement — baby-krebs-api
 
-Domaine : **https://baby-krebs.fontaine-romain.fr**, partagé avec
+Domaine : **https://baby-footenor.tenorsolutions.com**, partagé avec
 baby-krebs-client. Ce service prend `/api` et `/sanctum`, le client sert tout
 le reste. **Les deux stacks doivent tourner.**
 
@@ -13,12 +13,12 @@ place (`/srv/infra`). Il fournit :
 
 ## 0. DNS (avant tout)
 
-Enregistrement **A** `baby-krebs.fontaine-romain.fr` → IP publique de la VM.
+Enregistrement **A** `baby-footenor.tenorsolutions.com` → IP publique de la VM.
 Vérifier la propagation avant de lancer les stacks, sinon Let's Encrypt
 échoue :
 
 ```bash
-dig +short baby-krebs.fontaine-romain.fr
+dig +short baby-footenor.tenorsolutions.com
 ```
 
 ## 1. Accès GitHub depuis la VM
@@ -113,8 +113,8 @@ Voir le `DEPLOY.md` de baby-krebs-client.
 ## Vérification finale
 
 ```bash
-curl -s https://baby-krebs.fontaine-romain.fr/api/session   # → {"data":null}
-curl -s https://baby-krebs.fontaine-romain.fr/api/tournaments
+curl -s https://baby-footenor.tenorsolutions.com/api/session   # → {"data":null}
+curl -s https://baby-footenor.tenorsolutions.com/api/tournaments
 ```
 
 Puis sur le site : « Se connecter » avec le compte de l'étape 6, et créer les
@@ -133,7 +133,7 @@ secours.
 Sur https://portal.azure.com, ouvrir **Microsoft Entra ID**, puis
 **Inscriptions d'applications** → **Nouvelle inscription** :
 
-- **Nom** : `Baby Krebs`.
+- **Nom** : `Baby FooTenor`.
 - **Types de comptes pris en charge** :
   - *Comptes dans un annuaire organisationnel et comptes Microsoft
     personnels* : accepte les comptes pro **et** perso. Garder
@@ -142,7 +142,7 @@ Sur https://portal.azure.com, ouvrir **Microsoft Entra ID**, puis
     les comptes de ton organisation. Mettre alors l'**ID de l'annuaire
     (locataire)** dans `MICROSOFT_TENANT_ID`.
 - **URI de redirection** : plateforme **Web**, valeur
-  `https://baby-krebs.fontaine-romain.fr/api/auth/microsoft/callback`.
+  `https://baby-footenor.tenorsolutions.com/api/auth/microsoft/callback`.
 
 Ensuite, dans l'application créée :
 
@@ -169,7 +169,7 @@ Puis redéployer (code à jour via RoPloy, puis `./deploy.sh`) : la migration
 
 ### 3. Vérifier
 
-« Se connecter avec Microsoft » depuis https://baby-krebs.fontaine-romain.fr/login :
+« Se connecter avec Microsoft » depuis https://baby-footenor.tenorsolutions.com/login :
 
 - avec un compte admin, on arrive sur l'admin ;
 - avec un autre compte, on revient sur la page de connexion avec le message
