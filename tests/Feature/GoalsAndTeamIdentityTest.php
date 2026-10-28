@@ -133,6 +133,43 @@ class GoalsAndTeamIdentityTest extends TestCase
             ->assertJsonValidationErrors('color');
     }
 
+    public function test_team_short_name_defaults_to_initials_and_can_be_set(): void
+    {
+        $this->assertSame('CQP', (new Team(['name' => 'Chauve qui peut']))->shortName());
+        $this->assertSame('SUN', (new Team(['name' => 'Sunny']))->shortName());
+        $this->assertSame('MDV', (new Team(['name' => "Mains d'Velours"]))->shortName());
+
+        $game = $this->game();
+        $team = Team::find($game->team_a_id);
+        $payload = ['name' => $team->name, 'players' => $team->playerIds()];
+
+        $this->actingAs($this->admin)->patchJson("/api/teams/{$team->id}", [...$payload, 'short_name' => 'abc'])
+            ->assertOk();
+        $this->assertSame('ABC', $team->fresh()->short_name);
+
+        // Vidé : retour aux initiales calculées.
+        $this->actingAs($this->admin)->patchJson("/api/teams/{$team->id}", [...$payload, 'short_name' => ''])
+            ->assertOk();
+        $this->assertNull($team->fresh()->short_name);
+
+        $this->actingAs($this->admin)->patchJson("/api/teams/{$team->id}", [...$payload, 'short_name' => 'A B'])
+            ->assertJsonValidationErrors('short_name');
+    }
+
+    public function test_tournament_rules_are_editable_by_admin_only(): void
+    {
+        $tournament = $this->game()->tournament;
+
+        $this->patchJson("/api/tournaments/{$tournament->id}", ['rules' => 'Pas de roulette.'])
+            ->assertUnauthorized();
+
+        $this->actingAs($this->admin)->patchJson("/api/tournaments/{$tournament->id}", ['rules' => 'Pas de roulette.'])
+            ->assertOk()->assertJsonPath('data.rules', 'Pas de roulette.');
+
+        $this->app['auth']->forgetGuards();
+        $this->getJson("/api/tournaments/{$tournament->id}")->assertJsonPath('data.rules', 'Pas de roulette.');
+    }
+
     public function test_logo_upload_and_serving(): void
     {
         Storage::fake('local');

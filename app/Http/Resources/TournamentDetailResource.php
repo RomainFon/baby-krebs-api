@@ -23,9 +23,11 @@ class TournamentDetailResource extends JsonResource
 
         return [
             ...(new TournamentSummaryResource($this->resource))->toArray($request),
+            'rules' => $this->rules,
             'teams' => $teams->map(fn (Team $team) => [
                 'id' => $team->id,
                 'name' => $team->name,
+                'short_name' => $team->shortName(),
                 'color' => $team->color,
                 'logo_url' => $team->logoUrl(),
                 'pool_id' => $team->pool_id,

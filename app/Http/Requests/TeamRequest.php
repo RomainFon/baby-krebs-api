@@ -25,6 +25,8 @@ class TeamRequest extends FormRequest
             'players' => ['required', 'array', 'size:2'],
             'players.*' => ['required', 'integer', 'distinct', Rule::exists('players', 'id')],
             // Couleur choisie à la roue chromatique (sinon tirée au hasard à la création).
+            // Diminutif (lettres/chiffres) ; vide = initiales calculées.
+            'short_name' => ['sometimes', 'nullable', 'string', 'max:5', 'regex:/^[\pL\pN]+$/u'],
             'color' => ['sometimes', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
         ];
     }
@@ -55,7 +57,7 @@ class TeamRequest extends FormRequest
 
     public function attributes(): array
     {
-        return ['players.*' => 'joueur', 'color' => 'couleur'];
+        return ['players.*' => 'joueur', 'color' => 'couleur', 'short_name' => 'diminutif'];
     }
 
     public function messages(): array

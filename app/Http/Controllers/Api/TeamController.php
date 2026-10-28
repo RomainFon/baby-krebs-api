@@ -96,6 +96,7 @@ class TeamController extends Controller
             'name' => trim($request->validated('name')),
             'player_one_id' => $one,
             'player_two_id' => $two,
+            ...($request->has('short_name') ? ['short_name' => mb_strtoupper(trim((string) $request->validated('short_name'))) ?: null] : []),
             ...($request->has('color') ? ['color' => strtolower($request->validated('color'))] : []),
         ];
     }

@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['name', 'status', 'group_count', 'wb_per_group', 'lb_per_group', 'target_score'])]
+#[Fillable(['name', 'status', 'group_count', 'wb_per_group', 'lb_per_group', 'target_score', 'rules'])]
 class Tournament extends Model
 {
     public const STATUS_DRAFT = 'draft';

@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['tournament_id', 'pool_id', 'name', 'color', 'logo_path', 'player_one_id', 'player_two_id'])]
+#[Fillable(['tournament_id', 'pool_id', 'name', 'short_name', 'color', 'logo_path', 'player_one_id', 'player_two_id'])]
 class Team extends Model
 {
     // Palette des écussons par défaut : couleurs franches et distinctes entre
@@ -26,6 +26,24 @@ class Team extends Model
         $free = array_values(array_diff(self::COLORS, $used));
 
         return collect($free ?: self::COLORS)->random();
+    }
+
+    /**
+     * Diminutif affiché : celui saisi par l'admin, sinon les initiales du nom
+     * ("Chauve qui peut" → "CQP"), ou les 3 premières lettres d'un nom en un
+     * seul mot.
+     */
+    public function shortName(): string
+    {
+        if ($this->short_name) {
+            return $this->short_name;
+        }
+        $words = preg_split("/[\\s\\-'’]+/u", trim($this->name), -1, PREG_SPLIT_NO_EMPTY);
+        $short = count($words) > 1
+            ? implode('', array_map(fn ($w) => mb_substr($w, 0, 1), array_slice($words, 0, 5)))
+            : mb_substr($words[0] ?? '?', 0, 3);
+
+        return mb_strtoupper($short);
     }
 
     /** URL relative (même domaine que le SPA), versionnée pour le cache. */

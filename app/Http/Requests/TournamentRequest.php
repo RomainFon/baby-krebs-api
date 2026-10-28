@@ -17,6 +17,8 @@ class TournamentRequest extends FormRequest
             'wb_per_group' => ['sometimes', 'integer', 'min:1', 'max:8'],
             'lb_per_group' => ['sometimes', 'integer', 'min:0', 'max:8'],
             'target_score' => ['sometimes', 'integer', 'min:1', 'max:99'],
+            // Règlement : texte libre, modifiable à tout moment.
+            'rules' => ['sometimes', 'nullable', 'string', 'max:20000'],
         ];
     }
 }
