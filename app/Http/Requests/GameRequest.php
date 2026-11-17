@@ -16,6 +16,9 @@ class GameRequest extends FormRequest
             'goals' => ['sometimes', 'array', 'max:4'],
             'goals.*.player_id' => ['required', 'integer', 'distinct'],
             'goals.*.goals' => ['required', 'integer', 'min:0', 'max:99'],
+            // Gardiens (facultatif) : un joueur de chaque équipe, null = inconnu.
+            'keeper_a_id' => ['sometimes', 'nullable', 'integer'],
+            'keeper_b_id' => ['sometimes', 'nullable', 'integer'],
         ];
     }
 }

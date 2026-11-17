@@ -56,6 +56,8 @@ class TournamentDetailResource extends JsonResource
                 'team_b_id' => $game->team_b_id,
                 'score_a' => $game->score_a,
                 'score_b' => $game->score_b,
+                'keeper_a_id' => $game->keeper_a_id,
+                'keeper_b_id' => $game->keeper_b_id,
                 'scheduled_at' => $game->scheduled_at?->toIso8601String(),
                 'played_at' => $game->played_at?->toIso8601String(),
                 'seed_a' => $game->seed_a,

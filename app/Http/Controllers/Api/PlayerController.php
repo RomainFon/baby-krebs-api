@@ -43,7 +43,7 @@ class PlayerController extends Controller
             ->filter(fn (Game $g) => in_array($g->team_a_id, $teamIds, true) || in_array($g->team_b_id, $teamIds, true))
             ->sortByDesc(fn (Game $g) => $g->played_at?->timestamp ?? 0)
             ->values()
-            ->map(function (Game $g) use ($teamIds, $allTeams, $personalGoals) {
+            ->map(function (Game $g) use ($teamIds, $allTeams, $personalGoals, $player) {
                 $isA = in_array($g->team_a_id, $teamIds, true);
                 $own = $allTeams->get($isA ? $g->team_a_id : $g->team_b_id);
                 $opponent = $allTeams->get($isA ? $g->team_b_id : $g->team_a_id);
@@ -60,6 +60,8 @@ class PlayerController extends Controller
                     'score_against' => $isA ? $g->score_b : $g->score_a,
                     // Buts du joueur dans ce match, si les buteurs ont été saisis.
                     'goals_scored' => $personalGoals[$g->id] ?? null,
+                    // Gardien de son équipe dans ce match : null si non saisi.
+                    'keeper' => ($keeperId = $isA ? $g->keeper_a_id : $g->keeper_b_id) === null ? null : $keeperId === $player->id,
                     'played_at' => $g->played_at?->toIso8601String(),
                 ];
             });

@@ -99,6 +99,52 @@ class GoalsAndTeamIdentityTest extends TestCase
             ->assertOk()->assertJsonCount(0, 'data.games.0.goals');
     }
 
+    public function test_keepers_count_goals_conceded(): void
+    {
+        $game = $this->game();
+        [$a1] = Team::find($game->team_a_id)->playerIds();
+        [, $b2] = Team::find($game->team_b_id)->playerIds();
+
+        $this->actingAs($this->admin)->patchJson("/api/games/{$game->id}", [
+            'score_a' => 10, 'score_b' => 4, 'keeper_a_id' => $a1, 'keeper_b_id' => $b2,
+        ])->assertOk()->assertJsonPath('data.games.0.keeper_a_id', $a1);
+
+        $a1Stats = $this->getJson("/api/players/{$a1}")->json('data');
+        $this->assertSame(1, $a1Stats['stats']['games_as_keeper']);
+        $this->assertSame(4, $a1Stats['stats']['goals_conceded_as_keeper']);
+        $this->assertTrue($a1Stats['games'][0]['keeper']);
+        $this->assertSame(10, $this->getJson("/api/players/{$b2}")->json('data.stats.goals_conceded_as_keeper'));
+
+        $stats = $this->getJson('/api/stats')->json('data');
+        $this->assertSame($a1, $stats['best_keeper']['id']);
+        $this->assertSame($b2, $stats['leakiest']['id']);
+
+        // Un seul gardien peut être changé sans toucher à l'autre.
+        $this->actingAs($this->admin)->patchJson("/api/games/{$game->id}", ['keeper_a_id' => null])->assertOk();
+        $this->assertNull($game->fresh()->keeper_a_id);
+        $this->assertSame($b2, $game->fresh()->keeper_b_id);
+
+        // Effacer le score efface les gardiens.
+        $this->actingAs($this->admin)->patchJson("/api/games/{$game->id}", ['score_a' => null, 'score_b' => null])->assertOk();
+        $this->assertNull($game->fresh()->keeper_b_id);
+    }
+
+    public function test_keeper_must_belong_to_the_team(): void
+    {
+        $game = $this->game();
+        [$b1] = Team::find($game->team_b_id)->playerIds();
+
+        $this->actingAs($this->admin)->patchJson("/api/games/{$game->id}", [
+            'score_a' => 10, 'score_b' => 4, 'keeper_a_id' => $b1,
+        ])->assertUnprocessable()->assertJsonValidationErrors('keeper_a_id');
+        $this->assertNull($game->fresh()->score_a);
+
+        // Pas de gardien sur un match sans score.
+        [$a1] = Team::find($game->team_a_id)->playerIds();
+        $this->actingAs($this->admin)->patchJson("/api/games/{$game->id}", ['keeper_a_id' => $a1])
+            ->assertUnprocessable();
+    }
+
     public function test_teams_get_distinct_default_colors(): void
     {
         foreach (['Ana', 'Bob', 'Cid', 'Dan'] as $name) {

@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
     'tournament_id', 'number', 'stage', 'pool_id', 'round', 'position',
-    'team_a_id', 'team_b_id', 'score_a', 'score_b', 'scheduled_at', 'played_at',
+    'team_a_id', 'team_b_id', 'score_a', 'score_b', 'keeper_a_id', 'keeper_b_id', 'scheduled_at', 'played_at',
     'seed_a', 'seed_b', 'winner_to_game_id', 'winner_to_slot', 'loser_to_game_id', 'loser_to_slot',
 ])]
 class Game extends Model
@@ -27,6 +27,8 @@ class Game extends Model
         return [
             'score_a' => 'integer',
             'score_b' => 'integer',
+            'keeper_a_id' => 'integer',
+            'keeper_b_id' => 'integer',
             'scheduled_at' => 'datetime',
             'played_at' => 'datetime',
         ];

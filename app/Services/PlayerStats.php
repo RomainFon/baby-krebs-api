@@ -38,7 +38,7 @@ class PlayerStats
     }
 
     /**
-     * @return array<int, array{played:int, wins:int, losses:int, goals_for:int, goals_against:int, goal_diff:int, win_rate:float, tournaments:int, titles:int, fannys_given:int, fannys_taken:int, goals_scored:int, games_with_goals:int}>
+     * @return array<int, array{played:int, wins:int, losses:int, goals_for:int, goals_against:int, goal_diff:int, win_rate:float, tournaments:int, titles:int, fannys_given:int, fannys_taken:int, goals_scored:int, games_with_goals:int, games_as_keeper:int, goals_conceded_as_keeper:int}>
      */
     public function all(): array
     {
@@ -49,6 +49,9 @@ class PlayerStats
             // Buts marqués par le joueur lui-même (matchs où les buteurs ont
             // été saisis) ; goals_for reste le total de son équipe.
             'goals_scored' => 0, 'games_with_goals' => 0,
+            // Matchs où le joueur a été désigné gardien, et buts encaissés
+            // dans ces matchs ; goals_against reste le total de son équipe.
+            'games_as_keeper' => 0, 'goals_conceded_as_keeper' => 0,
         ];
 
         $stats = [];
@@ -64,7 +67,7 @@ class PlayerStats
         }
 
         foreach ($this->games() as $game) {
-            foreach ([[$game->team_a_id, $game->score_a, $game->score_b], [$game->team_b_id, $game->score_b, $game->score_a]] as [$teamId, $for, $against]) {
+            foreach ([[$game->team_a_id, $game->score_a, $game->score_b, $game->keeper_a_id], [$game->team_b_id, $game->score_b, $game->score_a, $game->keeper_b_id]] as [$teamId, $for, $against, $keeperId]) {
                 $team = $this->teams()->get($teamId);
                 if (! $team) {
                     continue;
@@ -84,6 +87,10 @@ class PlayerStats
                     }
                     if ($game->stage === Game::STAGE_FINAL && $for > $against) {
                         $s['titles']++;
+                    }
+                    if ($keeperId === $id) {
+                        $s['games_as_keeper']++;
+                        $s['goals_conceded_as_keeper'] += $against;
                     }
                     unset($s);
                 }

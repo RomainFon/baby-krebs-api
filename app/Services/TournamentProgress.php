@@ -33,6 +33,8 @@ class TournamentProgress
             $game->update([
                 'score_a' => $scoreA,
                 'score_b' => $scoreB,
+                // Pas de gardien sur un match qui n'est plus joué.
+                ...($clearing ? ['keeper_a_id' => null, 'keeper_b_id' => null] : []),
                 'played_at' => $clearing ? null : ($game->played_at ?? now()),
             ]);
 

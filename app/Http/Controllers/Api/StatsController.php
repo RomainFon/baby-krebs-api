@@ -29,6 +29,13 @@ class StatsController extends Controller
         $player = fn ($row) => $row ? ['id' => $row['id'], 'name' => $row['name'], 'stats' => collect($row)->except(['id', 'name'])] : null;
         $byRate = fn ($row) => [$row['win_rate'], $row['goal_diff'], $row['played']];
 
+        // Gardiens classés à partir du même seuil de matchs (dans les cages).
+        $keepers = $all->where('games_as_keeper', '>=', self::MIN_GAMES_FOR_RANKING);
+        if ($keepers->isEmpty()) {
+            $keepers = $all->where('games_as_keeper', '>', 0);
+        }
+        $perKeeperGame = fn ($r) => $r['goals_conceded_as_keeper'] / $r['games_as_keeper'];
+
         return response()->json(['data' => [
             'games_played' => $games->count(),
             'best_player' => $player($ranked->sortByDesc($byRate)->first()),
@@ -39,7 +46,13 @@ class StatsController extends Controller
                 $all->where('goals_scored', '>', 0)->sortByDesc('goals_scored')->first()
                 ?? $all->where('played', '>', 0)->sortByDesc('goals_for')->first(),
             ),
-            'leakiest' => $player($all->where('played', '>', 0)->sortByDesc(fn ($r) => $r['goals_against'] / $r['played'])->first()),
+            // Passoire : vrais gardiens dès que des gardiens ont été saisis,
+            // sinon buts encaissés par l'équipe.
+            'leakiest' => $player(
+                $keepers->sortByDesc($perKeeperGame)->first()
+                ?? $all->where('played', '>', 0)->sortByDesc(fn ($r) => $r['goals_against'] / $r['played'])->first(),
+            ),
+            'best_keeper' => $player($keepers->sortBy($perKeeperGame)->first()),
             'most_titles' => $player($all->where('titles', '>', 0)->sortByDesc('titles')->first()),
             'fanny_victim' => $player($all->where('fannys_taken', '>', 0)->sortByDesc('fannys_taken')->first()),
             'min_games_for_ranking' => self::MIN_GAMES_FOR_RANKING,

@@ -7,16 +7,17 @@ use App\Http\Requests\GameRequest;
 use App\Http\Resources\TournamentDetailResource;
 use App\Models\Game;
 use App\Services\GameGoals;
+use App\Services\GameKeepers;
 use App\Services\TournamentProgress;
 use Illuminate\Support\Facades\DB;
 
 class GameController extends Controller
 {
-    public function update(GameRequest $request, Game $game, TournamentProgress $progress, GameGoals $goals): TournamentDetailResource
+    public function update(GameRequest $request, Game $game, TournamentProgress $progress, GameGoals $goals, GameKeepers $keepers): TournamentDetailResource
     {
         $data = $request->validated();
 
-        DB::transaction(function () use ($data, $game, $progress, $goals) {
+        DB::transaction(function () use ($data, $game, $progress, $goals, $keepers) {
             if (array_key_exists('scheduled_at', $data)) {
                 $game->update(['scheduled_at' => $data['scheduled_at']]);
             }
@@ -32,6 +33,11 @@ class GameController extends Controller
 
             if (array_key_exists('goals', $data)) {
                 $goals->sync($game, $data['goals']);
+            }
+
+            $keeperData = array_intersect_key($data, array_flip(['keeper_a_id', 'keeper_b_id']));
+            if ($keeperData) {
+                $keepers->sync($game, $keeperData);
             }
         });
 
