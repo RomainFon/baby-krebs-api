@@ -39,6 +39,14 @@ class GameController extends Controller
             if ($keeperData) {
                 $keepers->sync($game, $keeperData);
             }
+
+            // Le gardien de chaque équipe est obligatoire dès qu'on saisit un
+            // score ou qu'on touche aux gardiens (son coéquipier = attaquant).
+            // Les matchs déjà joués sans gardien restent lisibles tels quels.
+            $scoreTouched = array_key_exists('score_a', $data) || array_key_exists('score_b', $data);
+            if (($scoreTouched || $keeperData) && $game->refresh()->isPlayed()) {
+                $keepers->ensureComplete($game);
+            }
         });
 
         return new TournamentDetailResource($game->tournament->withDetail());

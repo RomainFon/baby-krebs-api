@@ -7,8 +7,9 @@ use App\Models\Team;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Gardien de chaque équipe dans un match. Facultatif, par équipe : le
- * gardien doit être un des deux joueurs de son équipe.
+ * Gardien de chaque équipe dans un match : un des deux joueurs de son
+ * équipe, son coéquipier étant l'attaquant. Obligatoire sur un match joué
+ * (vérifié par ensureComplete, appelé à la saisie).
  */
 class GameKeepers
 {
@@ -31,5 +32,17 @@ class GameKeepers
         }
 
         $game->update(array_map(fn ($id) => $id === null ? null : (int) $id, $data));
+    }
+
+    /** Un match joué doit avoir le gardien de chaque équipe. */
+    public function ensureComplete(Game $game): void
+    {
+        $missing = array_keys(array_filter(
+            ['keeper_a_id' => $game->keeper_a_id, 'keeper_b_id' => $game->keeper_b_id],
+            fn ($id) => $id === null,
+        ));
+        if ($missing) {
+            throw ValidationException::withMessages(array_fill_keys($missing, 'Indique le gardien de chaque équipe.'));
+        }
     }
 }

@@ -29,7 +29,7 @@ class Game extends Model
             'score_b' => 'integer',
             'keeper_a_id' => 'integer',
             'keeper_b_id' => 'integer',
-            'scheduled_at' => 'datetime',
+            'scheduled_at' => 'date:Y-m-d',
             'played_at' => 'datetime',
         ];
     }

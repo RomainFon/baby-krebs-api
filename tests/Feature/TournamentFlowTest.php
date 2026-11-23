@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Game;
 use App\Models\Player;
+use App\Models\Team;
 use App\Models\Tournament;
 use App\Models\User;
 use App\Services\TournamentDraw;
@@ -101,9 +102,30 @@ class TournamentFlowTest extends TestCase
             ->assertUnprocessable();
         $this->actingAs($admin)->patchJson("/api/games/{$game->id}", ['score_a' => 10, 'score_b' => 10])
             ->assertUnprocessable();
+        $keepers = [
+            'keeper_a_id' => Team::find($game->team_a_id)->player_one_id,
+            'keeper_b_id' => Team::find($game->team_b_id)->player_one_id,
+        ];
         $this->actingAs($admin)->patchJson("/api/games/{$game->id}", ['score_a' => 10, 'score_b' => 7])
+            ->assertUnprocessable()->assertJsonValidationErrors(['keeper_a_id', 'keeper_b_id']);
+        $this->actingAs($admin)->patchJson("/api/games/{$game->id}", ['score_a' => 10, 'score_b' => 7, ...$keepers])
             ->assertOk()
             ->assertJsonPath('data.games.0.score_a', 10);
+    }
+
+    public function test_games_are_scheduled_on_a_day_without_time(): void
+    {
+        $tournament = $this->makeTournament(4, 1, 2, 0);
+        app(TournamentDraw::class)->run($tournament);
+        $game = $tournament->games()->first();
+        $admin = User::factory()->create();
+
+        $this->actingAs($admin)->patchJson("/api/games/{$game->id}", ['scheduled_at' => '2026-12-05T18:30:00Z'])
+            ->assertUnprocessable();
+        $this->actingAs($admin)->patchJson("/api/games/{$game->id}", ['scheduled_at' => '2026-12-05'])
+            ->assertOk()
+            ->assertJsonPath('data.games.0.scheduled_at', '2026-12-05');
+        $this->getJson('/api/tournaments')->assertJsonPath('data.0.starts_at', '2026-12-05');
     }
 
     public function test_a_tournament_can_be_created_with_just_a_name(): void

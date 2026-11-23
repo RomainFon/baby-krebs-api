@@ -41,6 +41,15 @@ class GoalsAndTeamIdentityTest extends TestCase
         return $tournament->games()->where('stage', Game::STAGE_GROUP)->first();
     }
 
+    /** Gardiens par défaut : le premier joueur de chaque équipe. */
+    private function keepers(Game $game): array
+    {
+        return [
+            'keeper_a_id' => Team::find($game->team_a_id)->player_one_id,
+            'keeper_b_id' => Team::find($game->team_b_id)->player_one_id,
+        ];
+    }
+
     private function id(string $name): int
     {
         return Player::findByName($name)->id;
@@ -53,7 +62,7 @@ class GoalsAndTeamIdentityTest extends TestCase
         [$a1, $a2] = $teamA->playerIds();
 
         $this->actingAs($this->admin)->patchJson("/api/games/{$game->id}", [
-            'score_a' => 10, 'score_b' => 4,
+            ...$this->keepers($game), 'score_a' => 10, 'score_b' => 4,
             'goals' => [['player_id' => $a1, 'goals' => 7], ['player_id' => $a2, 'goals' => 3]],
         ])->assertOk()->assertJsonCount(2, 'data.games.0.goals');
 
@@ -92,7 +101,7 @@ class GoalsAndTeamIdentityTest extends TestCase
         $game = $this->game();
         [$a1] = Team::find($game->team_a_id)->playerIds();
         $this->actingAs($this->admin)->patchJson("/api/games/{$game->id}", [
-            'score_a' => 10, 'score_b' => 4, 'goals' => [['player_id' => $a1, 'goals' => 10]],
+            ...$this->keepers($game), 'score_a' => 10, 'score_b' => 4, 'goals' => [['player_id' => $a1, 'goals' => 10]],
         ])->assertOk();
 
         $this->actingAs($this->admin)->patchJson("/api/games/{$game->id}", ['score_a' => 10, 'score_b' => 6])
@@ -119,14 +128,41 @@ class GoalsAndTeamIdentityTest extends TestCase
         $this->assertSame($a1, $stats['best_keeper']['id']);
         $this->assertSame($b2, $stats['leakiest']['id']);
 
-        // Un seul gardien peut être changé sans toucher à l'autre.
-        $this->actingAs($this->admin)->patchJson("/api/games/{$game->id}", ['keeper_a_id' => null])->assertOk();
-        $this->assertNull($game->fresh()->keeper_a_id);
+        // Un seul gardien peut être changé sans toucher à l'autre, mais pas retiré.
+        [, $a2] = Team::find($game->team_a_id)->playerIds();
+        $this->actingAs($this->admin)->patchJson("/api/games/{$game->id}", ['keeper_a_id' => $a2])->assertOk();
+        $this->assertSame($a2, $game->fresh()->keeper_a_id);
         $this->assertSame($b2, $game->fresh()->keeper_b_id);
+        $this->actingAs($this->admin)->patchJson("/api/games/{$game->id}", ['keeper_a_id' => null])
+            ->assertUnprocessable()->assertJsonValidationErrors('keeper_a_id');
+        $this->assertSame($a2, $game->fresh()->keeper_a_id);
 
         // Effacer le score efface les gardiens.
         $this->actingAs($this->admin)->patchJson("/api/games/{$game->id}", ['score_a' => null, 'score_b' => null])->assertOk();
         $this->assertNull($game->fresh()->keeper_b_id);
+    }
+
+    public function test_attacker_and_defender_stats_follow_the_keeper(): void
+    {
+        $game = $this->game();
+        [$a1, $a2] = Team::find($game->team_a_id)->playerIds();
+        [$b1, $b2] = Team::find($game->team_b_id)->playerIds();
+
+        $this->actingAs($this->admin)->patchJson("/api/games/{$game->id}", [
+            'score_a' => 10, 'score_b' => 4, 'keeper_a_id' => $a1, 'keeper_b_id' => $b1,
+            'goals' => [['player_id' => $a1, 'goals' => 2], ['player_id' => $a2, 'goals' => 8]],
+        ])->assertOk();
+
+        $a1Stats = $this->getJson("/api/players/{$a1}")->json('data.stats');
+        $this->assertEquals([1, 1, 1, 0], [$a1Stats['games_as_keeper'], $a1Stats['wins_as_keeper'], $a1Stats['keeper_win_rate'], $a1Stats['games_as_attacker']]);
+        $this->assertSame(0, $a1Stats['goals_scored_as_attacker']);
+        $this->assertSame([2, 1], [$a1Stats['goals_scored_as_keeper'], $a1Stats['games_with_goals_as_keeper']]);
+
+        $a2Stats = $this->getJson("/api/players/{$a2}")->json('data.stats');
+        $this->assertEquals([1, 1, 1, 8], [$a2Stats['games_as_attacker'], $a2Stats['wins_as_attacker'], $a2Stats['attacker_win_rate'], $a2Stats['goals_scored_as_attacker']]);
+
+        $b2Stats = $this->getJson("/api/players/{$b2}")->json('data.stats');
+        $this->assertSame([1, 0, 0], [$b2Stats['games_as_attacker'], $b2Stats['wins_as_attacker'], $b2Stats['games_as_keeper']]);
     }
 
     public function test_keeper_must_belong_to_the_team(): void

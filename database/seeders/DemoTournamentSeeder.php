@@ -65,13 +65,38 @@ class DemoTournamentSeeder extends Seeder
     }
 
     /**
-     * Programme tous les matchs à 15 min d'intervalle, puis joue (score
+     * Gardien obligatoire sur chaque match joué : chaque joueur a un poste
+     * préféré (stable d'un run à l'autre) qu'il tient 3 matchs sur 4. Buteurs :
+     * l'attaquant marque l'essentiel des buts, le gardien quelques-uns.
+     */
+    private function keepersAndScorers(Game $game): void
+    {
+        $keepers = [];
+        foreach (['a' => [$game->team_a_id, $game->score_a], 'b' => [$game->team_b_id, $game->score_b]] as $slot => [$teamId, $score]) {
+            [$one, $two] = Team::find($teamId)->playerIds();
+            // Joueur dont le nom a une longueur paire = défenseur dans l'âme.
+            $preferred = strlen(Player::find($one)->name) % 2 === 0 ? $one : $two;
+            $keeper = random_int(1, 4) === 1 ? ($preferred === $one ? $two : $one) : $preferred;
+            $attacker = $keeper === $one ? $two : $one;
+            $keepers["keeper_{$slot}_id"] = $keeper;
+
+            $keeperGoals = random_int(0, min(3, $score));
+            $game->goals()->createMany([
+                ['player_id' => $attacker, 'goals' => $score - $keeperGoals],
+                ['player_id' => $keeper, 'goals' => $keeperGoals],
+            ]);
+        }
+        $game->update($keepers);
+    }
+
+    /**
+     * Programme tous les matchs le jour `$start` (joués à 15 min d'intervalle), puis joue (score
      * aléatoire) tant que `$until` l'accepte — tous les matchs si null.
      */
     private function play(Tournament $tournament, $start, ?callable $until): void
     {
         foreach ($tournament->games()->get() as $i => $game) {
-            $game->update(['scheduled_at' => $start->copy()->addMinutes(15 * $i)]);
+            $game->update(['scheduled_at' => $start->toDateString()]);
         }
 
         $progress = app(TournamentProgress::class);
@@ -81,7 +106,8 @@ class DemoTournamentSeeder extends Seeder
             }
             $loser = random_int(0, 9);
             $progress->recordScore($game, ...(random_int(0, 1) ? [10, $loser] : [$loser, 10]));
-            $game->update(['played_at' => $game->scheduled_at]);
+            $game->refresh()->update(['played_at' => $start->copy()->addMinutes(15 * ($game->number - 1))]);
+            $this->keepersAndScorers($game);
         }
     }
 }

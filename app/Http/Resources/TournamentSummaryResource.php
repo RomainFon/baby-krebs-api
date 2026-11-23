@@ -27,7 +27,7 @@ class TournamentSummaryResource extends JsonResource
             'games_total' => $games->count(),
             'games_played' => $games->filter(fn (Game $g) => $g->isPlayed())->count(),
             // Premier match programmé : sert de "date du tournoi" sur l'accueil.
-            'starts_at' => $games->pluck('scheduled_at')->filter()->min()?->toIso8601String(),
+            'starts_at' => $games->pluck('scheduled_at')->filter()->min()?->toDateString(),
             'champion' => $champion ? [
                 'id' => $champion->id,
                 'name' => $champion->name,
