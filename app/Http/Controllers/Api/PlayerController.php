@@ -35,7 +35,9 @@ class PlayerController extends Controller
         $players = Player::query()->pluck('name', 'id');
         $allTeams = $stats->teams();
 
-        $personalGoals = GameGoal::query()->where('player_id', $player->id)->pluck('goals', 'game_id');
+        // Buts du joueur par match, toutes manches confondues.
+        $personalGoals = GameGoal::query()->where('player_id', $player->id)->get()
+            ->groupBy('game_id')->map(fn ($rows) => $rows->sum('goals'));
 
         $partnerOf = fn ($team) => $team->player_one_id === $player->id ? $team->player_two_id : $team->player_one_id;
 
@@ -58,10 +60,16 @@ class PlayerController extends Controller
                     'opponent_name' => $opponent?->name,
                     'score_for' => $isA ? $g->score_a : $g->score_b,
                     'score_against' => $isA ? $g->score_b : $g->score_a,
+                    // BO3/BO5 : score_* = manches gagnées, détail des manches
+                    // vu du joueur ([pour, contre]).
+                    'best_of' => $g->best_of,
+                    'sets' => $g->best_of > 1 ? array_map(fn ($m) => $isA ? [$m['a'], $m['b']] : [$m['b'], $m['a']], $g->manches()) : null,
                     // Buts du joueur dans ce match, si les buteurs ont été saisis.
                     'goals_scored' => $personalGoals[$g->id] ?? null,
                     // Gardien de son équipe dans ce match : null si non saisi.
-                    'keeper' => ($keeperId = $isA ? $g->keeper_a_id : $g->keeper_b_id) === null ? null : $keeperId === $player->id,
+                    // En BO3/BO5 : gardien dans au moins une manche, et dans combien.
+                    'keeper' => ($keepers = array_filter(array_column($g->manches(), $isA ? 'keeper_a_id' : 'keeper_b_id'), fn ($id) => $id !== null)) === [] ? null : in_array($player->id, $keepers, true),
+                    'keeper_manches' => $g->best_of > 1 ? count(array_keys(array_column($g->manches(), $isA ? 'keeper_a_id' : 'keeper_b_id'), $player->id, true)) : null,
                     'played_at' => $g->played_at?->toIso8601String(),
                 ];
             });

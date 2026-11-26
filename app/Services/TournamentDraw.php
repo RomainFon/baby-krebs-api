@@ -45,7 +45,7 @@ class TournamentDraw
             throw ValidationException::withMessages(['teams' => $error]);
         }
 
-        if ($tournament->games()->whereNotNull('score_a')->exists()) {
+        if ($tournament->games()->where(Game::startedConstraint())->exists()) {
             throw ValidationException::withMessages(['tournament' => 'Des scores ont déjà été saisis : impossible de refaire le tirage.']);
         }
 

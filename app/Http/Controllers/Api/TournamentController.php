@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\TournamentRequest;
 use App\Http\Resources\TournamentDetailResource;
 use App\Http\Resources\TournamentSummaryResource;
+use App\Models\Game;
 use App\Models\Tournament;
 use App\Services\TournamentDraw;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -74,7 +75,7 @@ class TournamentController extends Controller
     // équipes ou le format. Refusé dès qu'un score existe.
     public function resetDraw(Tournament $tournament): TournamentDetailResource
     {
-        if ($tournament->games()->whereNotNull('score_a')->exists()) {
+        if ($tournament->games()->where(Game::startedConstraint())->exists()) {
             throw ValidationException::withMessages(['tournament' => 'Des scores ont déjà été saisis : impossible d\'annuler le tirage.']);
         }
 

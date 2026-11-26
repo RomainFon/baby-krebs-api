@@ -6,12 +6,12 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['game_id', 'player_id', 'goals'])]
+#[Fillable(['game_id', 'player_id', 'manche', 'goals'])]
 class GameGoal extends Model
 {
     protected function casts(): array
     {
-        return ['goals' => 'integer'];
+        return ['goals' => 'integer', 'manche' => 'integer'];
     }
 
     public function game(): BelongsTo

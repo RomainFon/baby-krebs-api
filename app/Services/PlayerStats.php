@@ -73,7 +73,18 @@ class PlayerStats
         }
 
         foreach ($this->games() as $game) {
-            foreach ([[$game->team_a_id, $game->score_a, $game->score_b, $game->keeper_a_id], [$game->team_b_id, $game->score_b, $game->score_a, $game->keeper_b_id]] as [$teamId, $for, $against, $keeperId]) {
+            // Buts = points de toutes les manches (BO3/BO5), victoire = celle
+            // du match, fanny = manche perdue sans marquer.
+            $manches = $game->manches();
+            $wonA = $game->winnerId() === $game->team_a_id;
+            foreach ([
+                [$game->team_a_id, 'a', 'b', $wonA],
+                [$game->team_b_id, 'b', 'a', ! $wonA],
+            ] as [$teamId, $own, $other, $won]) {
+                $for = $game->points($own);
+                $against = $game->points($other);
+                $fannysGiven = count(array_filter($manches, fn ($m) => $m[$other] === 0));
+                $fannysTaken = count(array_filter($manches, fn ($m) => $m[$own] === 0));
                 $team = $this->teams()->get($teamId);
                 if (! $team) {
                     continue;
@@ -83,27 +94,31 @@ class PlayerStats
                     $s['played']++;
                     $s['goals_for'] += $for;
                     $s['goals_against'] += $against;
-                    $for > $against ? $s['wins']++ : $s['losses']++;
-                    // Fanny : défaite (ou victoire) sans marquer un seul but.
-                    if ($against === 0) {
-                        $s['fannys_given']++;
-                    }
-                    if ($for === 0) {
-                        $s['fannys_taken']++;
-                    }
-                    if ($game->stage === Game::STAGE_FINAL && $for > $against) {
+                    $won ? $s['wins']++ : $s['losses']++;
+                    // Fanny : manche perdue (ou gagnée) sans marquer un seul but.
+                    $s['fannys_given'] += $fannysGiven;
+                    $s['fannys_taken'] += $fannysTaken;
+                    if ($game->stage === Game::STAGE_FINAL && $won) {
                         $s['titles']++;
                     }
-                    if ($keeperId === $id) {
-                        $s['games_as_keeper']++;
-                        $s['goals_conceded_as_keeper'] += $against;
-                        if ($for > $against) {
-                            $s['wins_as_keeper']++;
-                        }
-                    } elseif ($keeperId !== null) {
-                        $s['games_as_attacker']++;
-                        if ($for > $against) {
-                            $s['wins_as_attacker']++;
+                    // Postes manche par manche (le gardien peut changer en
+                    // BO3/BO5 ; en BO1, une manche = le match) : gardien =
+                    // défenseur, son coéquipier = attaquant, aucun poste si
+                    // le gardien n'a pas été saisi.
+                    foreach ($manches as $m) {
+                        $keeperId = $m["keeper_{$own}_id"];
+                        $mancheWon = $m[$own] > $m[$other];
+                        if ($keeperId === $id) {
+                            $s['games_as_keeper']++;
+                            $s['goals_conceded_as_keeper'] += $m[$other];
+                            if ($mancheWon) {
+                                $s['wins_as_keeper']++;
+                            }
+                        } elseif ($keeperId !== null) {
+                            $s['games_as_attacker']++;
+                            if ($mancheWon) {
+                                $s['wins_as_attacker']++;
+                            }
                         }
                     }
                     unset($s);
@@ -112,16 +127,20 @@ class PlayerStats
         }
 
         $games = $this->games()->keyBy('id');
-        foreach (GameGoal::query()->whereIn('game_id', $games->keys())->get() as $goal) {
+        $goalRows = GameGoal::query()->whereIn('game_id', $games->keys())->get();
+        // Matchs avec buts saisis : un par match, même sur plusieurs manches.
+        foreach ($goalRows->unique(fn (GameGoal $g) => "{$g->game_id}:{$g->player_id}") as $goal) {
             $stats[$goal->player_id] ??= $empty();
+            $stats[$goal->player_id]['games_with_goals']++;
+        }
+        foreach ($goalRows as $goal) {
             $s = &$stats[$goal->player_id];
             $s['goals_scored'] += $goal->goals;
-            $s['games_with_goals']++;
-            // Poste sur ce match : gardien saisi = défenseur, sinon attaquant
-            // si son équipe a un gardien saisi.
+            // Poste dans cette manche : gardien saisi = défenseur, sinon
+            // attaquant si son équipe a un gardien saisi.
             $game = $games->get($goal->game_id);
             $inTeamA = in_array($goal->player_id, $this->playerIds($this->teams()->get($game->team_a_id) ?? new Team), true);
-            $keeperId = $inTeamA ? $game->keeper_a_id : $game->keeper_b_id;
+            $keeperId = $game->manches()[$goal->manche - 1][$inTeamA ? 'keeper_a_id' : 'keeper_b_id'] ?? null;
             if ($keeperId === $goal->player_id) {
                 $s['goals_scored_as_keeper'] += $goal->goals;
                 $s['games_with_goals_as_keeper']++;

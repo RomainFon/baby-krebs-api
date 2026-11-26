@@ -113,6 +113,93 @@ class TournamentFlowTest extends TestCase
             ->assertJsonPath('data.games.0.score_a', 10);
     }
 
+    public function test_a_game_can_be_played_in_best_of_three(): void
+    {
+        $tournament = $this->makeTournament(4, 1, 2, 0);
+        app(TournamentDraw::class)->run($tournament);
+        $game = $tournament->games()->first();
+        $admin = User::factory()->create();
+        $a = $game->team_a_id;
+        [$p1, $p2] = [Team::find($a)->player_one_id, Team::find($a)->player_two_id];
+        [$q1, $q2] = [Team::find($game->team_b_id)->player_one_id, Team::find($game->team_b_id)->player_two_id];
+        // Une manche : points et gardien de chaque équipe (il peut changer).
+        $m = fn ($sa, $sb, $ka = null, $kb = null) => ['a' => $sa, 'b' => $sb, 'keeper_a_id' => $ka ?? $p1, 'keeper_b_id' => $kb ?? $q1];
+        $url = "/api/games/{$game->id}";
+
+        $this->actingAs($admin)->patchJson($url, ['best_of' => 2])->assertUnprocessable();
+        $this->actingAs($admin)->patchJson($url, ['best_of' => 3])->assertOk()
+            ->assertJsonPath('data.games.0.best_of', 3);
+
+        // Un score simple ne suffit plus, il faut les manches.
+        $this->actingAs($admin)->patchJson($url, ['score_a' => 10, 'score_b' => 7])
+            ->assertUnprocessable()->assertJsonValidationErrors('sets');
+        // Gardiens au niveau du match : refusés, ils se saisissent par manche.
+        $this->actingAs($admin)->patchJson($url, ['sets' => [$m(10, 7)], 'keeper_a_id' => $p1, 'keeper_b_id' => $q1])
+            ->assertUnprocessable()->assertJsonValidationErrors('keepers');
+        // Gardien manquant ou pas de la bonne équipe.
+        $this->actingAs($admin)->patchJson($url, ['sets' => [['a' => 10, 'b' => 7, 'keeper_a_id' => $p1]]])
+            ->assertUnprocessable()->assertJsonValidationErrors('sets');
+        $this->actingAs($admin)->patchJson($url, ['sets' => [$m(10, 7, $q1)]])
+            ->assertUnprocessable()->assertJsonValidationErrors('sets');
+
+        // Saisie au fur et à mesure : une manche, puis la suivante. Tant que
+        // personne n'a 2 manches, pas de résultat ni d'avancement.
+        $this->actingAs($admin)->patchJson($url, ['sets' => [$m(10, 7)]])->assertOk()
+            ->assertJsonPath('data.games.0.score_a', null)
+            ->assertJsonPath('data.games.0.played_at', null)
+            ->assertJsonPath('data.games.0.sets.0.keeper_a_id', $p1);
+        $this->actingAs($admin)->patchJson($url, ['sets' => [$m(10, 7), $m(4, 10, $p2)]])->assertOk()
+            ->assertJsonPath('data.games.0.score_a', null)
+            ->assertJsonPath('data.games.0.sets.1.keeper_a_id', $p2);
+        $this->assertSame(0, $this->getJson("/api/tournaments/{$tournament->id}")->json('data.games_played'));
+        // Commencé : le format ne change plus.
+        $this->actingAs($admin)->patchJson($url, ['best_of' => 5])->assertUnprocessable();
+        // Manche de trop après 2-0, manche invalide.
+        $this->actingAs($admin)->patchJson($url, ['sets' => [$m(10, 7), $m(10, 2), $m(3, 10)]])
+            ->assertUnprocessable()->assertJsonValidationErrors('sets');
+        $this->actingAs($admin)->patchJson($url, ['sets' => [$m(10, 7), $m(9, 8)]])
+            ->assertUnprocessable()->assertJsonValidationErrors('sets');
+
+        // A gagne 2-1 en marquant moins de points au total (20 contre 27).
+        // p1 garde la manche 1 (perdue), puis p2 garde les deux suivantes.
+        $sets = ['sets' => [$m(0, 10), $m(10, 8, $p2), $m(10, 9, $p2, $q2)]];
+        // Buteurs groupés sur le match : refusés, ils se saisissent par manche.
+        $this->actingAs($admin)->patchJson($url, [...$sets, 'goals' => [
+            ['player_id' => $p1, 'goals' => 20], ['player_id' => $p2, 'goals' => 0],
+        ]])->assertUnprocessable()->assertJsonValidationErrors('goals');
+        $this->actingAs($admin)->patchJson($url, [...$sets, 'goals' => [
+            ['player_id' => $p1, 'manche' => 2, 'goals' => 6], ['player_id' => $p2, 'manche' => 2, 'goals' => 4],
+            ['player_id' => $p1, 'manche' => 3, 'goals' => 10], ['player_id' => $p2, 'manche' => 3, 'goals' => 0],
+        ]])->assertOk()
+            ->assertJsonPath('data.games.0.goals.0.manche', 2)
+            ->assertJsonPath('data.games.0.score_a', 2)
+            ->assertJsonPath('data.games.0.score_b', 1)
+            ->assertJsonPath('data.games.0.sets.2.b', 9);
+
+        $row = collect($this->getJson("/api/tournaments/{$tournament->id}")->json('data.pools.0.standings'))->firstWhere('team_id', $a);
+        $this->assertSame([1, 20, 27], [$row['wins'], $row['goals_for'], $row['goals_against']]);
+        // La manche perdue 0-10 compte comme une fanny. Postes manche par
+        // manche : p1 gardien en M1 (perdue, 10 encaissés), attaquant en M2
+        // et M3 (gagnées, 16 buts).
+        $stats = $this->getJson("/api/players/{$p1}")->json('data.stats');
+        $this->assertSame([1, 1, 16, 1], [$stats['wins'], $stats['fannys_taken'], $stats['goals_scored'], $stats['games_with_goals']]);
+        $this->assertSame([1, 0, 10], [$stats['games_as_keeper'], $stats['wins_as_keeper'], $stats['goals_conceded_as_keeper']]);
+        $this->assertSame([2, 2, 16], [$stats['games_as_attacker'], $stats['wins_as_attacker'], $stats['goals_scored_as_attacker']]);
+        $this->assertSame([2, 4], [
+            $this->getJson("/api/players/{$p2}")->json('data.stats.games_as_keeper'),
+            $this->getJson("/api/players/{$p2}")->json('data.stats.goals_scored_as_keeper'),
+        ]);
+        $this->assertSame(1, $this->getJson("/api/players/{$p1}")->json('data.games.0.keeper_manches'));
+
+        // Changer de format sur un match joué : refusé, sauf en effaçant le score.
+        $this->actingAs($admin)->patchJson($url, ['best_of' => 5])
+            ->assertUnprocessable()->assertJsonValidationErrors('best_of');
+        $this->actingAs($admin)->patchJson($url, ['best_of' => 1, 'score_a' => null, 'score_b' => null])->assertOk()
+            ->assertJsonPath('data.games.0.best_of', 1)
+            ->assertJsonPath('data.games.0.sets', null)
+            ->assertJsonPath('data.games.0.score_a', null);
+    }
+
     public function test_games_are_scheduled_on_a_day_without_time(): void
     {
         $tournament = $this->makeTournament(4, 1, 2, 0);

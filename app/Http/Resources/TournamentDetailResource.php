@@ -54,8 +54,11 @@ class TournamentDetailResource extends JsonResource
                 'position' => $game->position,
                 'team_a_id' => $game->team_a_id,
                 'team_b_id' => $game->team_b_id,
+                'best_of' => $game->best_of,
                 'score_a' => $game->score_a,
                 'score_b' => $game->score_b,
+                // BO3/BO5 : points de chaque manche (null en BO1).
+                'sets' => $game->best_of > 1 ? $game->sets : null,
                 'keeper_a_id' => $game->keeper_a_id,
                 'keeper_b_id' => $game->keeper_b_id,
                 'scheduled_at' => $game->scheduled_at?->toDateString(),
@@ -66,7 +69,7 @@ class TournamentDetailResource extends JsonResource
                 'winner_to_slot' => $game->winner_to_slot,
                 'loser_to_game_id' => $game->loser_to_game_id,
                 'loser_to_slot' => $game->loser_to_slot,
-                'goals' => $game->goals->map(fn ($g) => ['player_id' => $g->player_id, 'goals' => $g->goals])->values(),
+                'goals' => $game->goals->sortBy('manche')->map(fn ($g) => ['player_id' => $g->player_id, 'manche' => $g->manche, 'goals' => $g->goals])->values(),
             ])->values(),
         ];
     }

@@ -30,7 +30,10 @@ class Standings
         $played = $games->filter(fn (Game $g) => $g->isPlayed());
 
         foreach ($played as $game) {
-            foreach ([[$game->team_a_id, $game->score_a, $game->score_b], [$game->team_b_id, $game->score_b, $game->score_a]] as [$id, $for, $against]) {
+            // Buts = points de toutes les manches (BO3/BO5) ; la victoire
+            // reste celle du match.
+            $wonA = $game->winnerId() === $game->team_a_id;
+            foreach ([[$game->team_a_id, $game->points('a'), $game->points('b'), $wonA], [$game->team_b_id, $game->points('b'), $game->points('a'), ! $wonA]] as [$id, $for, $against, $won]) {
                 if (! isset($rows[$id])) {
                     continue;
                 }
@@ -38,7 +41,7 @@ class Standings
                 $rows[$id]['goals_for'] += $for;
                 $rows[$id]['goals_against'] += $against;
                 $rows[$id]['goal_diff'] += $for - $against;
-                $for > $against ? $rows[$id]['wins']++ : $rows[$id]['losses']++;
+                $won ? $rows[$id]['wins']++ : $rows[$id]['losses']++;
             }
         }
 
