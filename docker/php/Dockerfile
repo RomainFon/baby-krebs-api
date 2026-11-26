@@ -20,7 +20,7 @@ RUN composer install \
 # Version patch épinglée : un tag flottant (8.4-fpm-alpine) resterait figé sur
 # l'image en cache local au `--build`. 8.4.27 corrige PHP2Shell
 # (CVE-2026-109618 / CVE-2026-109619, 21/10/2026).
-FROM php:8.4.27-fpm-alpine
+FROM php:8.4.28-fpm-alpine
 
 RUN apk add --no-cache \
     postgresql-dev \
