@@ -3,10 +3,6 @@
 use App\Http\Controllers\Auth\MicrosoftAuthController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('welcome');
-});
-
 // SSO Microsoft. Volontairement dans web.php et pas api.php : le middleware
 // Sanctum EnsureFrontendRequestsAreStateful (appliqué à api.php) n'active la
 // session que pour les requêtes venant du SPA (Referer/Origin connu). Le
